@@ -113,9 +113,6 @@ python scripts/admet_prediction.py compounds.csv \
 - **DeepMol Case Studies:** https://github.com/BioSystemsUM/deepmol_case_studies
 - **WorkBuddy Docs:** https://www.codebuddy.cn/docs/workbuddy/Overview
 
-## License
-
-MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
