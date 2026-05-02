@@ -8,75 +8,104 @@ agent_created: true
 
 ## Overview
 
-DeepMol is a Python-based machine learning and deep learning framework for computational chemistry and drug discovery, built on RDKit, TensorFlow/Keras, PyTorch, scikit-learn, and DeepChem. This skill enables end-to-end ML workflows for molecular data: from raw SMILES/SDF loading through standardization, featurization, model training, hyperparameter optimization, SHAP-based explainability, to deployable prediction pipelines.
+DeepMol is a Python-based machine learning and deep learning framework for computational chemistry and drug discovery, built on RDKit, TensorFlow/Keras, PyTorch, scikit-learn, and DeepChem.
+
+**Verified on:** DeepMol 1.2.1, Python 3.14, Windows 11 -- May 2026.
 
 **Paper:** Correia, Capela & Rocha (2024). *DeepMol: An Automated Machine and Deep Learning Framework for Computational Chemistry.* Journal of Cheminformatics, 16, 136.
 
 ## When to Use This Skill
 
-Invoke this skill when the user's request involves any of the following:
+Invoke this skill when the user wants to:
 
-- Loading or processing molecular data files (CSV with SMILES, SDF with 3D structures)
-- Standardizing chemical compounds (ChEMBL, custom heavy standardization)
-- Generating molecular fingerprints or embeddings (Morgan, MACCS, RDK, AtomPair, Layered, Mol2Vec, DeepChem featurizers)
-- Feature selection for molecular descriptors
-- Dimensionality reduction (PCA, t-SNE, UMAP) or clustering (KMeans)
-- Training ML/DL models for molecular property prediction (classification, regression, multi-task)
-- Hyperparameter optimization with grid/random search
-- Model evaluation with custom metrics
-- SHAP-based model explainability and bit visualization on molecular structures
-- Handling imbalanced molecular datasets (SMOTE, SMOTEENN, etc.)
-- Building end-to-end prediction pipelines
-- Automated pipeline step optimization with Optuna
-- Using pre-trained ADMET prediction models
-- QSAR/QSPR modeling, virtual screening, or any cheminformatics ML task
+- Load molecular data files (CSV with SMILES, SDF with 3D structures)
+- Standardize chemical compounds (ChEMBL, custom heavy standardization)
+- Generate molecular fingerprints (Morgan, MACCS, RDK, AtomPair, Layered)
+- Select features or reduce dimensionality for molecular descriptors
+- Train scikit-learn models for molecular property prediction
+- Optimize hyperparameters with grid/random search
+- Explain model predictions with SHAP
+- Handle imbalanced molecular datasets
+- Build end-to-end prediction pipelines
+- Run automated pipeline optimization with Optuna
+- Do QSAR/QSPR modeling, virtual screening, or cheminformatics ML
 
-## Installation
+## Installation (Verified on Python 3.14)
 
-### Check Installation Status
+### Quick Start
 
-Before any DeepMol operation, first check if DeepMol is installed:
+**Step 1:** Install DeepMol core (skip `[all]` -- it breaks on Python >= 3.13):
 
 ```bash
-python -c "import deepmol; print(deepmol.__version__)"
+pip install deepmol --no-deps
 ```
 
-### Install if Missing
-
-If DeepMol is not installed:
+**Step 2:** Install compatible scikit-learn first (DeepMol pins `<1.6` but 1.8 works):
 
 ```bash
-pip install deepmol[all]
+pip install scikit-learn
 ```
 
-On Windows/macOS with quotes:
+**Step 3:** Install the core dependency bundle:
 
 ```bash
-pip install "deepmol[all]"
+pip install rdkit seaborn pillow h5py imbalanced-learn chembl_structure_pipeline graph-part kneed shap umap-learn dill boruta ipython pandas biosynfoni cached_property timeout_decorator matplotlib networkx plotly transformers
 ```
 
-**Critical installation notes:**
-
-- **GPU support:** Install TensorFlow and DGL versions matching the system's CUDA drivers before installing DeepMol.
-- **DO NOT install JAX** -- it causes dependency conflicts with DeepMol.
-- **mol2vec dependency** requires separate installation:
-  ```bash
-  pip install git+https://github.com/samoturk/mol2vec#egg=mol2vec
-  ```
-- **macOS note:** Loading TensorFlow models may fail due to a known keras issue. Use scikit-learn or DeepChem backends on macOS as fallback.
-- **Pre-trained models:** Install via `pip install deepmol-models` for published ADMET models.
-
-### Docker Alternative
+**Step 4:** Install PyTorch (CPU version is sufficient for most tasks):
 
 ```bash
-docker pull biosystemsum/deepmol
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
+
+**Step 5:** Install Optuna (optional, for automated pipeline optimization):
+
+```bash
+pip install optuna
+```
+
+**Step 6:** Verify installation:
+
+```bash
+python scripts/check_install.py
+```
+
+### What You Get vs. What's Skipped
+
+| Component | Status | Note |
+|-----------|--------|------|
+| scikit-learn models | Working | RandomForest, SVM, etc. -- main backend |
+| Morgan/MACCS/RDK fingerprints | Working | Core featurization |
+| SHAP explainability | Working | Beeswarm, waterfall, feature plots |
+| Pipeline (save/load) | Working | Without StandardScaler in pipeline |
+| Optuna optimization | Working | Automated pipeline tuning |
+| UMAP/PCA/KMeans | Working | Unsupervised analysis |
+| SMOTE/SMOTEENN | Working | Imbalanced data handling |
+| Keras/TensorFlow models | Not on 3.14 | scikeras has no 3.14 wheel; use 3.12 or conda |
+| DeepChem GNN models | Not on 3.14 | Needs TensorFlow -> scikeras chain |
+| Mol2Vec featurization | Needs C++ tools | gensim requires MSVC compiler |
+
+### Critical Installation Notes
+
+- **DO NOT install JAX** -- causes dependency conflicts.
+- **DO NOT use `pip install "deepmol[all]"` on Python >= 3.13** -- scikeras dependency resolution fails.
+- **Pre-trained ADMET models:** `pip install deepmol-models` (requires scikeras -> needs Python <= 3.12).
+- **GPU:** Install matching CUDA + cuDNN before TensorFlow/PyTorch GPU versions.
+- **Docker** alternative: `docker pull biosystemsum/deepmol` (fully configured).
+
+## Quick Start for Beginners
+
+After installation, the fastest way to learn is the bundled tutorial:
+
+```bash
+python scripts/tutorial.py
+```
+
+This walks through loading data, standardizing, featurizing, training, and evaluating -- with explanations at each step. Uses built-in demo data.
 
 ## Workflow: End-to-End Molecular ML
 
 ### Step 1: Data Loading
-
-Load molecular data from CSV (SMILES) or SDF (3D structures):
 
 ```python
 from deepmol.loaders.loaders import CSVLoader
@@ -85,38 +114,27 @@ from deepmol.loaders import SDFLoader
 # CSV with SMILES column
 loader = CSVLoader(
     dataset_path='data.csv',
-    smiles_field='mols',          # column with SMILES strings
-    id_field='ids',               # column with molecule IDs
-    labels_fields=['y'],          # target column(s)
-    features_fields=['feat_1'],   # additional pre-computed features (optional)
-    shard_size=1000,              # shard large datasets
-    mode='auto'                   # or 'multitask'
-)
-dataset = loader.create_dataset()
-
-# SDF with 3D structures
-loader = SDFLoader(
-    dataset_path='data.sdf',
-    id_field='ids',
-    labels_fields=['y']
+    smiles_field='smiles',       # column with SMILES strings
+    id_field='id',               # column with molecule IDs
+    labels_fields=['activity'],  # target column(s)
+    mode='auto'                  # auto-detect classification vs regression
 )
 dataset = loader.create_dataset()
 ```
 
-Dataset statistics: `dataset.get_shape()` returns `((n_samples, n_features), (n_samples, n_labels))`.
+**Dataset shape:** `dataset.get_shape()` returns a 3-tuple:
+```python
+((n_samples,), (n_samples, n_features), (n_labels,))
+# Before featurization, the middle element is None.
+```
 
 ### Step 2: Compound Standardization
 
-Standardize chemical structures before featurization:
-
 ```python
-from deepmol.standardizer import BasicStandardizer, CustomStandardizer, ChEMBLStandardizer
+from deepmol.standardizer import BasicStandardizer, CustomStandardizer
 
-# Basic (minimal sanitization)
-BasicStandardizer().standardize(dataset, inplace=True)
-
-# Custom heavy standardization
-heavy_config = {
+# Heavy standardization (recommended for most QSAR tasks)
+heavy = {
     'REMOVE_ISOTOPE': True,
     'NEUTRALISE_CHARGE': True,
     'REMOVE_STEREO': True,
@@ -125,233 +143,117 @@ heavy_config = {
     'KEKULIZE': False,
     'NEUTRALISE_CHARGE_LATE': True
 }
-CustomStandardizer(heavy_config).standardize(dataset, inplace=True)
-
-# ChEMBL standardizer
-ChEMBLStandardizer().standardize(dataset, inplace=True)
+CustomStandardizer(heavy).standardize(dataset, inplace=True)
 ```
-
-Always set `inplace=True` unless creating a transformed copy.
 
 ### Step 3: Molecular Featurization
 
-Generate molecular fingerprints or embeddings:
-
 ```python
-from deepmol.compound_featurization import (
-    MorganFingerprint, MACCSkeysFingerprint, LayeredFingerprint,
-    RDKFingerprint, AtomPairFingerprint, Mol2Vec, WeaveFeat
-)
+from deepmol.compound_featurization import MorganFingerprint, MACCSkeysFingerprint, RDKFingerprint
 
-# Morgan (ECFP-like) -- most common for QSAR
+# Morgan ECFP-like (best general-purpose)
 MorganFingerprint(radius=2, size=1024).featurize(dataset, inplace=True)
 
-# MACCS keys (166-bit structural keys)
-MACCSkeysFingerprint().featurize(dataset, inplace=True)
-
-# Mol2Vec (needs gensim + mol2vec package separately)
-Mol2Vec().featurize(dataset, inplace=True)
-
-# DeepChem featurizers (Weave, ConvMol, etc.)
-WeaveFeat().featurize(dataset, inplace=True)
-```
-
-**Choosing featurizers:**
-| Task Type | Recommended Featurizer |
-|-----------|----------------------|
-| Small dataset, interpretability | MACCS keys (166 bits) |
-| General QSAR/QSPR | Morgan (radius=2, size=1024 or 2048) |
-| Large dataset, deep learning | Mol2Vec, WeaveFeat |
-| 3D-aware models | SDFLoader + DeepChem featurizers |
-
-**Visualizing fingerprint bits on molecules:**
-```python
-maccs = MACCSkeysFingerprint()
-maccs.draw_bit("CCO", 110)  # draw bit 110 on ethanol
+# MACCS keys (166-bit, interpretable)
+# MACCSkeysFingerprint().featurize(dataset, inplace=True)
 ```
 
 ### Step 4: Feature Selection
 
-Reduce dimensionality after featurization:
-
 ```python
-from deepmol.feature_selection import LowVarianceFS, KbestFS, PercentileFS
+from deepmol.feature_selection import LowVarianceFS, KbestFS
 
-# Remove low-variance features
-LowVarianceFS(threshold=0.15).select_features(dataset, inplace=True)
-
-# Select K best features by ANOVA F-value
-KbestFS(k=100).select_features(dataset, inplace=True)
-
-# Select top percentile
-PercentileFS(percentile=10).select_features(dataset, inplace=True)
+LowVarianceFS(threshold=0.01).select_features(dataset, inplace=True)
+KbestFS(k=128).select_features(dataset, inplace=True)
+# Note: PercentileFS is not available in this version.
 ```
 
 ### Step 5: Data Splitting
 
-Split data for training/validation/testing:
-
 ```python
-from deepmol.splitters.splitters import (
-    SingletaskStratifiedSplitter, RandomSplitter
-)
+from deepmol.splitters.splitters import SingletaskStratifiedSplitter
 
-# Stratified split (recommended for imbalanced classification)
 splitter = SingletaskStratifiedSplitter()
 train, valid, test = splitter.train_valid_test_split(
-    dataset=dataset,
-    frac_train=0.7, frac_valid=0.15, frac_test=0.15
+    dataset, frac_train=0.6, frac_valid=0.2, frac_test=0.2
 )
-
-# Simple random split
-splitter = RandomSplitter()
-train, test = splitter.train_test_split(dataset, frac_train=0.8)
 ```
 
-### Step 6: Model Training
-
-DeepMol supports three model backends with a unified API:
-
-**scikit-learn models (recommended for tabular data):**
+### Step 6: Model Training (scikit-learn)
 
 ```python
-from sklearn.ensemble import RandomForestClassifier
 from deepmol.models.sklearn_models import SklearnModel
-from deepmol.metrics.metrics import Metric
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.ensemble import RandomForestClassifier
 
-model = SklearnModel(model=RandomForestClassifier(n_estimators=100))
+model = SklearnModel(RandomForestClassifier(n_estimators=100, random_state=42))
 model.fit(train)
-model.cross_validate(dataset, Metric(roc_auc_score), folds=5)
 
-# Save/load
-model.save('rf_model')
-# model = SklearnModel.load('rf_model')
-```
-
-**Keras/TensorFlow models (deep learning):**
-
-```python
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
-from deepmol.models.keras_models import KerasModel
-
-def create_model(optimizer='adam', dropout=0.5, input_dim=None):
-    model = Sequential([
-        Dense(64, input_dim=input_dim, activation='relu'),
-        Dropout(dropout),
-        Dense(32, activation='relu'),
-        Dense(1, activation='sigmoid')
-    ])
-    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-    return model
-
-nn_model = KerasModel(create_model, epochs=50, verbose=1, batch_size=32)
-nn_model.fit(train)
-```
-
-**DeepChem models (graph neural networks):**
-
-```python
-from deepmol.models.deepchem_models import DeepChemModel
-from deepchem.models import MPNNModel
-
-dc_model = DeepChemModel(
-    MPNNModel,
-    n_tasks=1, n_atom_feat=75, n_pair_feat=14,
-    n_hidden=75, T=1, M=1, mode='classification'
-)
-dc_model.fit(train)
+# Save & load
+model.save('my_model')
+# model = SklearnModel.load('my_model')
 ```
 
 ### Step 7: Model Evaluation
 
 ```python
-from sklearn.metrics import (
-    roc_auc_score, accuracy_score, precision_score,
-    recall_score, f1_score, confusion_matrix, classification_report
-)
+from deepmol.metrics.metrics import Metric
+from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
 
-metrics = [
-    Metric(roc_auc_score),
-    Metric(accuracy_score),
-    Metric(f1_score),
-    Metric(confusion_matrix)
-]
-
-train_scores = model.evaluate(train, metrics)
-test_scores = model.evaluate(test, metrics)
-print(test_scores)  # dict of metric name -> value
+metrics = [Metric(roc_auc_score), Metric(accuracy_score), Metric(f1_score)]
+scores, _ = model.evaluate(test, metrics)
+# scores is a dict: {'roc_auc_score': 0.85, 'accuracy_score': 0.82, ...}
 ```
 
 ### Step 8: Hyperparameter Optimization
 
 ```python
-from deepmol.parameter_optimization.hyperparameter_optimization import (
-    HyperparameterOptimizerValidation
-)
+from deepmol.parameter_optimization.hyperparameter_optimization import HyperparameterOptimizerValidation
 
-params = {
-    'n_estimators': [50, 100, 200],
-    'max_depth': [5, 10, 20, None],
-}
-
+params = {'n_estimators': [50, 100, 200], 'max_depth': [5, 10, None]}
 optimizer = HyperparameterOptimizerValidation(
     SklearnModel(RandomForestClassifier()),
-    metric=Metric(accuracy_score),
-    maximize_metric=True,
-    n_iter_search=10,
-    params_dict=params,
-    model_type="sklearn"
+    metric=Metric(accuracy_score), maximize_metric=True,
+    n_iter_search=10, params_dict=params, model_type="sklearn"
 )
-best_model, best_params, all_results = optimizer.fit(
-    train_dataset=train, valid_dataset=valid
-)
+best_model, best_params, all_results = optimizer.fit(train, valid)
 ```
 
-### Step 9: Model Explainability (SHAP)
+### Step 9: SHAP Explainability
 
 ```python
 from deepmol.feature_importance import ShapValues
 
 shap = ShapValues()
 shap.fit(train, model)
-
-# Generate plots
 shap.beeswarm_plot()
 shap.sample_explanation_plot(index=0, plot_type='waterfall')
-shap.feature_explanation_plot(feature_index=5)
 ```
 
 ### Step 10: End-to-End Pipeline
 
 ```python
 from deepmol.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
-steps = [
+pipeline = Pipeline(steps=[
     ('standardizer', BasicStandardizer()),
     ('featurizer', MorganFingerprint(radius=2, size=1024)),
-    ('scaler', StandardScaler()),
-    ('feature_selector', KbestFS(k=100)),
+    ('feature_selector', KbestFS(k=128)),
     ('model', SklearnModel(RandomForestClassifier()))
-]
+], path='my_pipeline/')
 
-pipeline = Pipeline(steps=steps, path='my_pipeline/')
 pipeline.fit_transform(train)
 predictions = pipeline.predict(test)
 pipeline.evaluate(test, [Metric(accuracy_score)])
 pipeline.save()
-
-# Load and reuse
 # pipeline = Pipeline.load('my_pipeline/')
 ```
 
-### Step 11: Automated Pipeline Optimization (Optuna)
+**Important:** Do NOT include `sklearn.preprocessing.StandardScaler` in the pipeline steps -- it lacks the `to_pickle` method expected by DeepMol 1.2.1's Pipeline serializer. If scaling is needed, apply it before pipeline construction.
+
+### Step 11: Optuna Pipeline Optimization
 
 ```python
 from deepmol.pipeline_optimization import PipelineOptimization
-from sklearn.svm import SVC
 
 def objective(trial):
     model_type = trial.suggest_categorical('model', ['RF', 'SVC'])
@@ -364,85 +266,65 @@ def objective(trial):
     return [('model', model)]
 
 po = PipelineOptimization(direction='maximize', study_name='qsar_study')
-po.optimize(
-    train_dataset=train, test_dataset=test,
-    objective_steps=objective,
-    metric=Metric(accuracy_score),
-    n_trials=50, save_top_n=5
-)
+po.optimize(train_dataset=train, test_dataset=test, objective_steps=objective,
+            metric=Metric(accuracy_score), n_trials=50, save_top_n=5)
 ```
 
 ## Handling Imbalanced Data
 
 ```python
-from deepmol.imbalanced_learn.imbalanced_learn import SMOTEENN, RandomSampler
+from deepmol.imbalanced_learn.imbalanced_learn import SMOTEENN, SMOTE
 
-# SMOTE + Edited Nearest Neighbors (recommended)
 train_balanced = SMOTEENN().sample(train)
-
-# Random oversampling
-train_balanced = RandomSampler().sample(train)
 ```
 
 ## Unsupervised Analysis
 
 ```python
-from deepmol.unsupervised import UMAP, PCA, TSNE, KMeans
+from deepmol.unsupervised import UMAP, PCA, KMeans
 
-# Dimensionality reduction + visualization
-umap = UMAP()
+umap = UMAP(n_components=2, n_neighbors=15)
 embedding = umap.run(dataset)
 umap.plot(embedding.X, path='umap_plot.png')
-
-# Clustering
-kmeans = KMeans(n_clusters=5, random_state=42)
-kmeans.run(dataset)
 ```
 
-## Pre-trained ADMET Models
+## Troubleshooting (Verified)
 
-Published ADMET models are in the `deepmol-models` package:
-
-```python
-# First install: pip install deepmol-models
-from deepmol_models import ADMETModel
-
-model = ADMETModel()
-predictions = model.predict(dataset)
-```
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| TensorFlow/Keras import errors | Use scikit-learn backend instead |
-| JAX conflicts | Uninstall JAX: `pip uninstall jax jaxlib` |
-| macOS Keras model loading fails | Use scikit-learn or DeepChem models |
-| mol2vec import error | Install separately: `pip install git+https://github.com/samoturk/mol2vec#egg=mol2vec` |
-| Dataset too large for memory | Use `shard_size` parameter in loaders |
-| SMILES parsing failures | Apply `BasicStandardizer` or `ChEMBLStandardizer` first |
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| `pip install "deepmol[all]"` fails | scikeras has no Python 3.13+ wheel | Use Step-by-step install from Installation section |
+| `gensim` build fails | No MSVC C++ compiler | Skip Mol2Vec; not needed for core workflows |
+| `get_shape()` returns 3 values, not 2 | DeepMol 1.2.1 API change | Unpack as `(n_samples,), (n_samples, n_feat), (n_labels,)` |
+| `PercentileFS` not found | Not exported in 1.2.1 | Use `KbestFS` instead |
+| `StandardScaler` in Pipeline fails to save | sklearn compat: no `to_pickle` | Remove scaler from pipeline steps |
+| `ImportError: No module named 'pwd'` | Windows sandbox missing USER env | Set `USER` and `USERNAME` env vars before running Python |
+| TensorFlow/Keras not importing | Python 3.14 incompatibility | Use scikit-learn backend or downgrade to Python 3.12 |
+| JAX conflicts | JAX installed alongside DeepMol | `pip uninstall jax jaxlib` |
+| Dataset too large for memory | Loading all molecules at once | Use `shard_size` parameter in loaders |
+| SMILES parsing failures | Invalid SMILES strings in data | Apply `BasicStandardizer` before featurization |
 
 ## Bundled Resources
 
 ### scripts/
 
-Reusable Python scripts for common workflows. Execute directly or adapt as needed:
-
-- `qsar_pipeline.py` -- Full QSAR pipeline from CSV to trained model
-- `batch_featurization.py` -- Batch featurize a directory of molecules
-- `admet_prediction.py` -- ADMET prediction workflow
+- `check_install.py` -- One-click environment verification. Run after installation to confirm everything works.
+- `tutorial.py` -- Guided step-by-step tutorial for beginners. Uses built-in demo data.
+- `qsar_pipeline.py` -- Full CLI QSAR pipeline: CSV -> train -> evaluate -> save.
+- `batch_featurization.py` -- Batch molecular featurization CLI.
+- `admet_prediction.py` -- Pre-trained ADMET model prediction CLI.
 
 ### references/
 
-- `api_reference.md` -- Comprehensive API reference for all DeepMol modules with parameter details
+- `api_reference.md` -- Comprehensive API reference for all DeepMol modules with parameter details.
 
 ## Important Rules
 
-1. **Always check installation first** -- run `python -c "import deepmol"` before any DeepMol code.
-2. **Standardize before featurization** -- apply compound standardization to avoid invalid molecule errors.
-3. **Use `inplace=True`** for chaining transformations on the same dataset object.
-4. **stratified splitting for classification** -- use `SingletaskStratifiedSplitter` for imbalanced datasets.
-5. **Save models and pipelines** -- use `.save()` and `.load()` methods for reproducibility.
-6. **Skip JAX** -- never suggest installing JAX when working with DeepMol.
-7. **mol2vec needs separate pip install** -- remind the user if they request Mol2Vec featurization.
-8. **Prefer user-level pip install** -- `pip install deepmol[all]` in the user's environment, not in a temporary venv unless explicitly requested.
+1. **Verify installation first** -- `python scripts/check_install.py` before any work.
+2. **Standardize before featurization** -- prevents invalid molecule errors.
+3. **Use `inplace=True`** -- chains transformations on the same dataset object.
+4. **Stratified splitting for classification** -- `SingletaskStratifiedSplitter`.
+5. **Save models** -- `.save()` / `.load()` for reproducibility.
+6. **Skip JAX** -- never install JAX with DeepMol.
+7. **Python >= 3.13: no `[all]` extra** -- use step-by-step install; scikeras is the blocker.
+8. **No StandardScaler in Pipeline** -- apply scaling separately if needed.
+9. **Prefer `SklearnModel`** -- it's the most reliable backend across Python versions.

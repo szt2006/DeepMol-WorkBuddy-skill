@@ -22,6 +22,8 @@ CSVLoader(
 )
 # Returns: Loader instance
 # .create_dataset() -> Dataset  (with .mols, .ids, .y, .X attributes)
+# Dataset.get_shape() -> ((n_samples,), (n_samples, n_features), (n_labels,))
+#   Note: the middle element is None before featurization.
 ```
 
 ### SDFLoader
@@ -229,16 +231,7 @@ KbestFS(
 # .select_features(dataset, inplace=False) -> Optional[Dataset]
 ```
 
-### PercentileFS
-
-```python
-from deepmol.feature_selection import PercentileFS
-
-PercentileFS(
-    percentile: int = 10,     # top percentile to keep
-    score_func = f_classif
-)
-```
+Note: `PercentileFS` is not available in DeepMol 1.2.1. Use `KbestFS` with a calculated k value instead.
 
 ### RecursiveFeatureElimination
 
@@ -627,6 +620,11 @@ Pipeline(
 # @classmethod .load(path: str) -> Pipeline
 ```
 
+**Important:** Do NOT include `sklearn.preprocessing.StandardScaler` in pipeline steps.
+DeepMol 1.2.1's Pipeline serializer calls `.to_pickle()` on each step, but
+`StandardScaler` lacks this method. If scaling is needed, apply it separately
+before pipeline construction.
+
 ### PipelineDataProcessing
 
 ```python
@@ -691,9 +689,10 @@ dataset.X         # np.ndarray -- feature matrix (None before featurization)
 dataset.features  # np.ndarray -- additional pre-computed features
 
 # Methods:
-dataset.get_shape()     # -> ((n_samples, n_features), (n_samples, n_labels))
-dataset.get_n_samples() # -> int
-dataset.get_n_features() # -> int
+dataset.get_shape()     # -> ((n_samples,), (n_samples, n_features), (n_labels,))
+                         #    Middle element is None before featurization
+dataset.get_n_samples() # -> int (may not exist in 1.2.1; use get_shape()[0][0])
+dataset.get_n_features() # -> int (may not exist; use get_shape()[1][1] after featurization)
 dataset.get_n_labels()   # -> int
 dataset.select(ids: List[str]) -> Dataset  # subset by molecule IDs
 dataset.remove(ids: List[str]) -> Dataset  # remove molecules by ID

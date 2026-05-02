@@ -14,10 +14,16 @@ deepmol-skill/
 ├── references/
 │   └── api_reference.md              # Full API reference for 14+ DeepMol modules
 └── scripts/
+    ├── check_install.py              # One-click environment verification
+    ├── tutorial.py                   # Guided beginner tutorial (built-in demo data)
     ├── qsar_pipeline.py              # CLI: end-to-end QSAR/QSPR pipeline
     ├── batch_featurization.py        # CLI: batch molecular featurization
     └── admet_prediction.py           # CLI: ADMET property prediction (pre-trained models)
 ```
+
+## Verified On
+
+DeepMol 1.2.1, Python 3.14, Windows 11 (May 2026). All code in this skill has been run and verified against a live installation. API documentation reflects actual behavior, not guesswork from READMEs.
 
 ## What This Skill Teaches AI Assistants
 
@@ -38,25 +44,31 @@ deepmol-skill/
 
 ## Prerequisites
 
-This skill assumes **DeepMol is installed** in the user's Python environment:
+**Python >= 3.13 note:** The official `pip install "deepmol[all]"` fails due to scikeras dependency. Use the verified step-by-step install from SKILL.md instead.
 
 ```bash
-pip install deepmol[all]
+# Core + sklearn-first approach (works on Python 3.13+)
+pip install deepmol --no-deps
+pip install scikit-learn
+pip install rdkit seaborn pillow h5py imbalanced-learn chembl_structure_pipeline \
+    graph-part kneed shap umap-learn dill boruta ipython pandas biosynfoni \
+    cached_property timeout_decorator matplotlib networkx plotly transformers
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install optuna
+
+# Verify
+python scripts/check_install.py
 ```
 
-For pre-trained ADMET models:
+## Quick Start After Install
 
 ```bash
-pip install deepmol-models
+# Guided tutorial (no data needed)
+python scripts/tutorial.py
+
+# Verify environment
+python scripts/check_install.py
 ```
-
-For Mol2Vec embeddings:
-
-```bash
-pip install git+https://github.com/samoturk/mol2vec#egg=mol2vec
-```
-
-> **Note:** The skill itself (SKILL.md + references) is pure documentation and can be read without DeepMol installed. The `scripts/` require DeepMol at runtime.
 
 ## Standalone Script Usage
 
